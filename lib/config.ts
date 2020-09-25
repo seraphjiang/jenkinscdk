@@ -3,5 +3,5 @@ export const config = {
   "region": "us-west-2",
   "az":"us-west-2a",
   "hostedZone": "mydomain.com",
-  "ami": "ami-0b915d99be61ac3ce"
+  "ami": "ami-04d27f19c95564d70"
 };

@@ -45,3 +45,14 @@ cdk bootstrap aws://123456789012/us-west-2
 # Deploy
 cdk deploy
 ```
+
+## Free AMIs
+
+version:2.258
+
+user/password:admin/admin
+
+* us-east-1:ami-0474ca24b9eb4c54e
+* us-east-2:ami-086c758d14f5d6838
+* us-west-1:ami-0fca6ea13117f12a4
+* us-west-2:ami-04d27f19c95564d70
