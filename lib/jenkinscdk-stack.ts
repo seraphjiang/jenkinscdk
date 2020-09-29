@@ -9,7 +9,7 @@ import * as targets from "@aws-cdk/aws-route53-targets";
 export class JenkinscdkStack extends cdk.Stack {
   constructor(scope: cdk.App, id: string, props?: any) {
     super(scope, id, props);
-    const { hostedZone: domainName, account, ami, az } = props.env;
+    const { hostedZone: domainName, account, ami, az, region } = props.env;
     const zone = route53.HostedZone.fromLookup(this, "jenkins-dns", {
       privateZone: false,
       domainName
@@ -27,7 +27,7 @@ export class JenkinscdkStack extends cdk.Stack {
       vpc,
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.M5, ec2.InstanceSize.XLARGE),
       machineImage: ec2.MachineImage.genericLinux({
-        "us-east-2": ami
+        region: ami
       }),
       vpcSubnets: vpc.selectSubnets({
         availabilityZones: [az]
