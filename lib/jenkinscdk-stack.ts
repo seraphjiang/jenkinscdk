@@ -15,10 +15,10 @@ export class JenkinscdkStack extends cdk.Stack {
       domainName
     });
 
-    const certificate = new cm.DnsValidatedCertificate(this, "jenkins-dns-cert", {
-      domainName: `${props.env.hostedZone}`,
-      validationMethod: cm.ValidationMethod.DNS,
-      hostedZone: zone
+    const jenkinsDomain = `jenkins.${domainName}`
+    const certificate = new cm.Certificate(this, "jenkins-dns-cert", {
+      domainName: jenkinsDomain,
+      validation: cm.CertificateValidation.fromDns(zone)
     });
 
     const vpc = new ec2.Vpc(this, 'jenkins-vpc');
@@ -27,7 +27,7 @@ export class JenkinscdkStack extends cdk.Stack {
       vpc,
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.M5, ec2.InstanceSize.XLARGE),
       machineImage: ec2.MachineImage.genericLinux({
-        region: ami
+        [region]: ami
       }),
       vpcSubnets: vpc.selectSubnets({
         availabilityZones: [az]
@@ -56,7 +56,7 @@ export class JenkinscdkStack extends cdk.Stack {
     });
 
     new route53.ARecord(this, "jenkins-dns-alias", {
-      recordName: props.domainName,
+      recordName: jenkinsDomain,
       target: route53.RecordTarget.fromAlias(
         new targets.LoadBalancerTarget(lb)
       ),

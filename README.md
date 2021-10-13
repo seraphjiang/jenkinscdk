@@ -2,6 +2,12 @@
 
 This is a CDK repository for build a Jenkins in AWS.
 
+## Environments
+All scripts have been verified with the following environments
+
+AWS CDK Version: 1.127.0
+NodeJS: v14.18.1
+
 ## CDK
 
 The `cdk.json` file tells the CDK Toolkit how to execute your app.
