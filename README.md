@@ -26,7 +26,7 @@ The `cdk.json` file tells the CDK Toolkit how to execute your app.
 1. make sure you have an AWS account
 2. make sure you have a hostedzone to be use to setup dns
 3. Find a AMI for jenkins master (Search for community one of create your own AMI)
-4. Setup lib/config.ts accordingly
+4. Setup lib/config.ts accordingly. Choose a valid existing key pair to use. Otherwise, the vm is not accessable
 
 ```
 export const config = {
@@ -34,7 +34,8 @@ export const config = {
   "region": "us-west-2",
   "az":"us-west-2a",
   "hostedZone": "mydomain.com",
-  "ami": "ami-0000111122223333e"
+  "ami": "ami-0000111122223333e",
+  "keyPair": "your-key",
 };
 
 ```

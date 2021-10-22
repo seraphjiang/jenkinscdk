@@ -9,7 +9,7 @@ import * as targets from "@aws-cdk/aws-route53-targets";
 export class JenkinscdkStack extends cdk.Stack {
   constructor(scope: cdk.App, id: string, props?: any) {
     super(scope, id, props);
-    const { hostedZone: domainName, account, ami, az, region } = props.env;
+    const { hostedZone: domainName, account, ami, az, keyPair, region } = props.env;
     const zone = route53.HostedZone.fromLookup(this, "jenkins-dns", {
       privateZone: false,
       domainName
@@ -21,7 +21,15 @@ export class JenkinscdkStack extends cdk.Stack {
       validation: cm.CertificateValidation.fromDns(zone)
     });
 
-    const vpc = new ec2.Vpc(this, 'jenkins-vpc');
+    const vpc = new ec2.Vpc(this, "jenkins-vpc", {
+      subnetConfiguration: [
+        {
+          cidrMask: 24,
+          name: "Ingress",
+          subnetType: ec2.SubnetType.PUBLIC,
+        },
+      ],
+    });
 
     const asg = new autoscaling.AutoScalingGroup(this, 'jenkins-master-asg', {
       vpc,
@@ -32,7 +40,20 @@ export class JenkinscdkStack extends cdk.Stack {
       vpcSubnets: vpc.selectSubnets({
         availabilityZones: [az]
       }),
+      keyName: keyPair,
     });
+
+    const initCmds = [
+      `runuser -l  ubuntu -c 'sudo systemctl stop apt-daily.timer'`,
+      `runuser -l  ubuntu -c 'sudo systemctl stop apt-daily-upgrade.timer'`,
+      `runuser -l  ubuntu -c 'sudo apt-get update'`,
+      `runuser -l  ubuntu -c 'sudo apt install -y docker.io'`,
+      `runuser -l  ubuntu -c 'sudo usermod -aG docker jenkins'`,
+      `runuser -l  ubuntu -c 'sudo systemctl start apt-daily.timer'`,
+      `runuser -l  ubuntu -c 'sudo systemctl start apt-daily-upgrade.timer'`,
+    ];
+
+    asg.userData.addCommands(...initCmds);
 
     const lb = new elbv2.ApplicationLoadBalancer(this, 'jenkins-master-lb', {
       vpc,
