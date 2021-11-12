@@ -23,10 +23,11 @@ The `cdk.json` file tells the CDK Toolkit how to execute your app.
 
 ## Prerequisite to deploy
 
-1. make sure you have an AWS account
-2. make sure you have a hostedzone to be use to setup dns
-3. Find a AMI for jenkins master (Search for community one of create your own AMI)
-4. Setup lib/config.ts accordingly. Choose a valid existing key pair to use. Otherwise, the vm is not accessable
+1. Make sure you have an AWS account.
+2. Make sure you have a hostedzone to be use to setup dns.
+3. Find a AMI for jenkins master (Search for community one of create your own AMI).
+4. Setup lib/config.ts accordingly. Choose a valid existing key pair to use. Otherwise, the vms are not accessable.
+5. Create lib/pvre-reporting-template.yml file, and copy the template content from [SSM Onboarding Wiki](https://w.amazon.com/bin/view/SystemsManager/InternalUse/Onboarding/). Most likely, you will need to update the tag configuration in the template.
 
 ```
 export const config = {
