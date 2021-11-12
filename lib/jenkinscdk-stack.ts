@@ -5,10 +5,20 @@ import * as ec2 from "@aws-cdk/aws-ec2";
 import * as autoscaling from "@aws-cdk/aws-autoscaling";
 import * as elbv2 from "@aws-cdk/aws-elasticloadbalancingv2";
 import * as targets from "@aws-cdk/aws-route53-targets";
+import * as cfninc from '@aws-cdk/cloudformation-include';
+import * as iam from '@aws-cdk/aws-iam';
+
+const SsmPolicyName = "service-role/AmazonEC2RoleforSSM"
+const NumWorkerNode = 2
 
 export class JenkinscdkStack extends cdk.Stack {
   constructor(scope: cdk.App, id: string, props?: any) {
     super(scope, id, props);
+
+    new cfninc.CfnInclude(this, `PVREReportingTemplate-${id}`, {
+      templateFile: "lib/pvre-reporting-template.yml",
+    });
+
     const { hostedZone: domainName, account, ami, az, keyPair, region } = props.env;
     const zone = route53.HostedZone.fromLookup(this, "jenkins-dns", {
       privateZone: false,
@@ -31,18 +41,32 @@ export class JenkinscdkStack extends cdk.Stack {
       ],
     });
 
-    const asg = new autoscaling.AutoScalingGroup(this, 'jenkins-master-asg', {
+    const ssmPolicy = iam.ManagedPolicy.fromAwsManagedPolicyName(SsmPolicyName);
+    const machineImage = ec2.MachineImage.genericLinux({[region]: ami});
+    const subnets = vpc.selectSubnets({availabilityZones: [az]})
+
+    const masterAsg = new autoscaling.AutoScalingGroup(this, 'jenkins-master-asg', {
       vpc,
       instanceType: ec2.InstanceType.of(ec2.InstanceClass.M5, ec2.InstanceSize.XLARGE),
-      machineImage: ec2.MachineImage.genericLinux({
-        [region]: ami
-      }),
-      vpcSubnets: vpc.selectSubnets({
-        availabilityZones: [az]
-      }),
+      machineImage: machineImage,
+      vpcSubnets: subnets,
       keyName: keyPair,
     });
 
+    masterAsg.role.addManagedPolicy(ssmPolicy)
+
+    const workerAsg = new autoscaling.AutoScalingGroup(this, 'jenkins-worker-asg', {
+      vpc,
+      instanceType: ec2.InstanceType.of(ec2.InstanceClass.C5, ec2.InstanceSize.XLARGE4),
+      machineImage: machineImage,
+      vpcSubnets: subnets,
+      keyName: keyPair,
+      maxCapacity: NumWorkerNode,
+      minCapacity: NumWorkerNode,
+    });
+
+    workerAsg.role.addManagedPolicy(ssmPolicy)
+  
     const initCmds = [
       `runuser -l  ubuntu -c 'sudo systemctl stop apt-daily.timer'`,
       `runuser -l  ubuntu -c 'sudo systemctl stop apt-daily-upgrade.timer'`,
@@ -53,7 +77,8 @@ export class JenkinscdkStack extends cdk.Stack {
       `runuser -l  ubuntu -c 'sudo systemctl start apt-daily-upgrade.timer'`,
     ];
 
-    asg.userData.addCommands(...initCmds);
+    masterAsg.userData.addCommands(...initCmds);
+    workerAsg.userData.addCommands(...initCmds);
 
     const lb = new elbv2.ApplicationLoadBalancer(this, 'jenkins-master-lb', {
       vpc,
@@ -67,12 +92,12 @@ export class JenkinscdkStack extends cdk.Stack {
 
     listener.addTargets('Target', {
       port: 8080,
-      targets: [asg]
+      targets: [masterAsg]
     });
 
     listener.connections.allowDefaultPortFromAnyIpv4('Open to the world');
 
-    asg.scaleOnRequestCount('AModestLoad', {
+    masterAsg.scaleOnRequestCount('AModestLoad', {
       targetRequestsPerSecond: 1
     });
 
